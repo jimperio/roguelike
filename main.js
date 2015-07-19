@@ -2,6 +2,8 @@ var TILE_SIZE = 30;
 var NUM_ROWS = 10;
 var NUM_COLS = 15;
 
+var SIDEBAR_WIDTH = 250;
+
 
 function init(parent) {
   var state = {
@@ -9,7 +11,7 @@ function init(parent) {
   };
 
   var game = new Phaser.Game(
-    NUM_COLS * TILE_SIZE,
+    NUM_COLS * TILE_SIZE + SIDEBAR_WIDTH,
     NUM_ROWS * TILE_SIZE,
     Phaser.AUTO,
     parent,
@@ -20,15 +22,23 @@ function init(parent) {
 
   function create() {
     initializeScreen();
+
     map = generateMap();
     player = {
       x: Math.ceil(Math.random() * 3),
       y: Math.ceil(Math.random() * 3),
+      currentHP: 100,
+      maxHP: 100,
+      attack: 5,
+      defense: 0
     };
     // HACK: Just set wherever the player is to a floor tile
     // in case it was a wall.
     map[player.y][player.x] = '.';
     updateScreen();
+
+    initializeSidebar();
+    updateSidebar();
 
     game.input.keyboard.addCallbacks(null, null, onKeyUp);
   }
@@ -114,5 +124,65 @@ function init(parent) {
       tile,
       textStyle
     );
+  }
+
+  var sidebarTextStyle = {
+    font: '20px monospace',
+    fill: '#fff'
+  };
+
+  function initializeSidebar() {
+    var sidebarX = NUM_COLS * TILE_SIZE;
+    // Fixed text items:
+    game.add.text(
+      sidebarX,
+      0,
+      'Welcome, Adventurer!',
+      sidebarTextStyle
+    );
+    game.add.text(
+      sidebarX,
+      30,
+      'HP:',
+      sidebarTextStyle
+    );
+    game.add.text(
+      sidebarX,
+      50,
+      'Attack:',
+      sidebarTextStyle
+    );
+    game.add.text(
+      sidebarX,
+      70,
+      'Defense:',
+      sidebarTextStyle
+    );
+    // Text items with dynamic values:
+    var valuesX = sidebarX + 120;
+    hpDisplay = game.add.text(
+      valuesX,
+      30,
+      '',
+      sidebarTextStyle
+    );
+    attackDisplay = game.add.text(
+      valuesX,
+      50,
+      '',
+      sidebarTextStyle
+    );
+    defenseDisplay = game.add.text(
+      valuesX,
+      70,
+      '',
+      sidebarTextStyle
+    );
+  }
+
+  function updateSidebar() {
+    hpDisplay.text = player.currentHP + '/' + player.maxHP;
+    attackDisplay.text = player.attack;
+    defenseDisplay.text = player.defense;
   }
 }
