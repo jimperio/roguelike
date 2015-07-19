@@ -3,7 +3,7 @@ var NUM_ROWS = 10;
 var NUM_COLS = 15;
 
 var SIDEBAR_WIDTH = 250;
-var BOTTOMBAR_HEIGHT = 60;
+var BOTTOMBAR_HEIGHT = 80;
 
 
 function init(parent) {
@@ -26,7 +26,7 @@ function init(parent) {
 
     worldState = {
       currentQuest: 'Kill the (B)addie!',
-      lastMessage: 'You feel a weirdly familiar disorientation.'
+      messages: []
     };
 
     map = generateMap();
@@ -38,6 +38,7 @@ function init(parent) {
     updateSidebar();
 
     initializeBottombar();
+    addMessage('You feel a weirdly familiar disorientation.');
 
     game.input.keyboard.addCallbacks(null, null, onKeyUp);
   }
@@ -176,19 +177,23 @@ function init(parent) {
     var actorDamage = actor.attack - player.defense;
     actor.currentHP = Math.max(0, actor.currentHP - playerDamage);
     var message = capitalize(player.name) + ' hit ' + actor.name + ' for ' + playerDamage + ' damage!';
+    addMessage(message);
     if (actor.currentHP > 0) {
       player.currentHP = Math.max(0, player.currentHP - actorDamage);
-      message += '\n';
-      message += capitalize(actor.name) + ' hit ' + player.name + ' for ' + actorDamage + ' damage!';
+      message = capitalize(actor.name) + ' hit ' + player.name + ' for ' + actorDamage + ' damage!';
+      addMessage(message);
+      var percentHP = actor.currentHP / actor.maxHP;
+      if (percentHP < 0.25) {
+        addMessage(capitalize(actor.name) + ' is bleeding profusely.');
+      } else if (percentHP < 0.5) {
+        addMessage(capitalize(actor.name) + ' breathes heavily.');
+      }
     } else {
       killActor(actor);
-      message += '\n';
-      message += capitalize(player.name) + ' killed ' + actor.name + '!';
+      message = capitalize(player.name) + ' killed ' + actor.name + '!';
+      addMessage(message);
     }
-    worldState.lastMessage = message;
-
     updateSidebar();
-    updateBottombar();
   }
 
   function killActor(actor) {
@@ -298,7 +303,7 @@ function init(parent) {
     messageDisplay = game.add.text(
       10,
       NUM_ROWS * TILE_SIZE + 10,
-      worldState.lastMessage,
+      '',
       {
         font: '15px monospace',
         fill: '#fff',
@@ -307,7 +312,12 @@ function init(parent) {
   }
 
   function updateBottombar() {
-    messageDisplay.text = worldState.lastMessage;
+    messageDisplay.text = worldState.messages.slice(-3).join('\n');
+  }
+
+  function addMessage(message) {
+    worldState.messages.push(message);
+    updateBottombar();
   }
 
   function capitalize(s) {
