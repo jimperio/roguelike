@@ -47,9 +47,17 @@ function init(parent) {
     for (var y = 0; y < NUM_ROWS; y++) {
       mapRow = [];
       for (var x = 0; x < NUM_COLS; x++) {
+        var threshold = 0.15;
+        var wallAbove = y > 0 && map[y-1][x] === '#';
+        var wallLeft = x > 0 && mapRow[x-1] === '#';
+        if (wallAbove && wallLeft) {
+          threshold = 0;
+        } else if (wallAbove || wallLeft) {
+          threshold = 0.3;
+        }
         if (y === 0 || y === NUM_ROWS -1 ||
             x === 0 || x === NUM_COLS - 1 ||
-            Math.random() > 0.8) {
+            Math.random() < threshold) {
           c = '#';
         } else {
           c = '.';
