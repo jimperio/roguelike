@@ -167,18 +167,19 @@ function init(parent) {
     var playerDamage = player.attack - actor.defense;
     var actorDamage = actor.attack - player.defense;
     actor.currentHP = Math.max(0, actor.currentHP - playerDamage);
+    var message = capitalize(player.name) + ' hit ' + actor.name + ' for ' + playerDamage + ' damage!';
     if (actor.currentHP > 0) {
       player.currentHP = Math.max(0, player.currentHP - actorDamage);
+      message += '\n';
+      message += capitalize(actor.name) + ' hit ' + player.name + ' for ' + actorDamage + ' damage!';
     } else {
       killActor(actor);
+      message += '\n';
+      message += capitalize(player.name) + ' killed ' + actor.name + '!';
     }
+    worldState.lastMessage = message;
 
     updateSidebar();
-
-    var message = capitalize(player.name) + ' hit for ' + playerDamage + ' damage!';
-    message += '\n';
-    message += capitalize(actor.name) + ' hit for ' + actorDamage + ' damage!';
-    worldState.lastMessage = message;
     updateBottombar();
   }
 
