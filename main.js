@@ -173,8 +173,8 @@ function init(parent) {
   }
 
   function doCombat(player, actor) {
-    var playerDamage = player.attack - actor.defense;
-    var actorDamage = actor.attack - player.defense;
+    var playerDamage = Math.ceil(player.attack * (1.2 - Math.random()*0.4)) - actor.defense;
+    var actorDamage = Math.ceil(actor.attack * (1.2 - Math.random()*0.4)) - player.defense;
     actor.currentHP = Math.max(0, actor.currentHP - playerDamage);
     var message = capitalize(player.name) + ' hit ' + actor.name + ' for ' + playerDamage + ' damage!';
     addMessage(message);
