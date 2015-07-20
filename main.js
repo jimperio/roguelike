@@ -109,15 +109,19 @@ function init(parent) {
   function onKeyUp(event) {
     switch(event.keyCode) {
       case Phaser.Keyboard.LEFT:
+      case Phaser.Keyboard.A:
         movePlayer({x: -1});
         break;
       case Phaser.Keyboard.RIGHT:
+      case Phaser.Keyboard.D:
         movePlayer({x: 1});
         break;
       case Phaser.Keyboard.UP:
+      case Phaser.Keyboard.W:
         movePlayer({y: -1});
         break;
       case Phaser.Keyboard.DOWN:
+      case Phaser.Keyboard.S:
         movePlayer({y: 1});
         break;
     }
@@ -186,11 +190,11 @@ function init(parent) {
       if (percentHP < 0.25) {
         addMessage(capitalize(actor.name) + ' is bleeding profusely.');
       } else if (percentHP < 0.5) {
-        addMessage(capitalize(actor.name) + ' breathes heavily.');
+        addMessage(capitalize(actor.name) + ' is breathing heavily.');
       }
     } else {
       killActor(actor);
-      message = capitalize(player.name) + ' killed ' + actor.name + '!';
+      message = capitalize(player.name) + ' kill ' + actor.name + '!';
       addMessage(message);
     }
     updateSidebar();
@@ -201,7 +205,7 @@ function init(parent) {
     actorPositions[actor.y][actor.x] = null;
     resetTile(actor.x, actor.y);
     if (actor.id === 'enemy') {
-      worldState.currentQuest = 'Escape the dungeon!';
+      worldState.currentQuest = 'Escape! [coming soon]';
       updateSidebar();
     }
   }
@@ -260,6 +264,13 @@ function init(parent) {
       sidebarX,
       110,
       'Quest:',
+      sidebarTextStyle
+    );
+
+    game.add.text(
+      sidebarX,
+      200,
+      'WASD or arrow keys to move.',
       sidebarTextStyle
     );
 
