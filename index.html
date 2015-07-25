@@ -2,23 +2,21 @@
 <html>
   <head>
     <title>RogueLike</title>
+    <link href='//fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
     <style>
       body {
-        margin: 0;
-        padding: 0;
-        text-align: center;
+        background: #333;
+        font-family: 'VT323' monospace;
+        color: #0F0;
       }
-      #screen {
-        display: inline-block;
+      #root {
+        position: relative;
       }
     </style>
   </head>
   <body>
-    <div id="screen"></div>
-    <script src="phaser.min.js"></script>
-    <script src="main.js"></script>
-    <script type="text/javascript">
-      init(document.querySelector('#screen'));
-    </script>
+    <h1>RogueLike</h1>
+    <div id='root'></div>
+    <script src='/static/bundle.js'></script>
   </body>
 </html>
