@@ -2,7 +2,7 @@ import React from 'react/addons'
 
 var {update} = React.addons
 
-const TILE_SIZE = 50
+const TILE_SIZE = 30
 const NUM_ROWS = 10
 const NUM_COLS = 15
 
