@@ -89,7 +89,7 @@ function init(parent) {
       }
     } else {
       target.kill();
-      message = capitalize(this.name) + ' kill ' + target.name + '!';
+      message = capitalize(this.name) + ' killed ' + target.name + '!';
       addMessage(message);
     }
     game.sidebar.update();
