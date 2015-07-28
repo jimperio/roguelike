@@ -21,23 +21,214 @@ function init(parent) {
     false
   );
 
+  var Actor = function(id, tile, name, stats, position) {
+    this.id = id;
+    this.tile = tile;
+    this.name = name;
+
+    this.currentHP = this.maxHP = stats.maxHP;
+    if (stats.currentHP) {
+      this.currentHP = stats.currentHP;
+    }
+    this.attack = stats.attack;
+    this.defense = stats.defense;
+
+    this.x = this.y = null;
+    this.setPosition(position);
+
+    game.actors[id] = this;
+    return this;
+  };
+
+  Actor.prototype.setPosition = function(pos) {
+    if (this.x === null && this.y === null) {
+      // This is the initial setting of position.
+      // HACK: Just set wherever an actor is to a floor tile
+      // in case it was a wall.
+      game.map[pos.y][pos.x] = '.';
+    } else {
+      game.actorPositions[this.y][this.x] = null;
+    }
+    this.x = pos.x;
+    this.y = pos.y;
+    game.actorPositions[this.y][this.x] = this;
+  };
+
+  Actor.prototype.isAlive = function() {
+    return this.currentHP > 0;
+  };
+
+  Actor.prototype.move = function(dir) {
+    x = this.x + (dir.x || 0);
+    y = this.y + (dir.y || 0);
+    actor = game.actorPositions[y][x];
+    if (actor !== null) {
+      this.attackTarget(actor);
+      if (actor.isAlive()) {
+        actor.reactToAttack(this);
+      }
+    } else if (game.map[y][x] === '.' &&
+        y >= 0 && y < NUM_ROWS &&
+        x >= 0 && x < NUM_COLS) {
+      this.setPosition({x: x, y: y});
+      updateScreen();
+    }
+  };
+
+  Actor.prototype.attackTarget = function(target) {
+    var damage = Math.ceil(this.attack * (1.2 - Math.random()*0.4)) - target.defense;
+    target.currentHP = Math.max(0, target.currentHP - damage);
+    var message = capitalize(this.name) + ' hit ' + target.name + ' for ' + damage + ' damage!';
+    addMessage(message);
+    if (target.isAlive()) {
+      var percentHP = target.currentHP / target.maxHP;
+      if (percentHP < 0.25) {
+        addMessage(capitalize(target.name) + ' is bleeding profusely.');
+      } else if (percentHP < 0.5) {
+        addMessage(capitalize(target.name) + ' is breathing heavily.');
+      }
+    } else {
+      target.kill();
+      message = capitalize(this.name) + ' kill ' + target.name + '!';
+      addMessage(message);
+    }
+    game.sidebar.update();
+  };
+
+  Actor.prototype.reactToAttack = function(attacker) {
+    // Default behavior is to just retaliate.
+    this.attackTarget(attacker);
+  };
+
+  Actor.prototype.kill = function() {
+    delete game.actors[this.id];
+    game.actorPositions[this.y][this.x] = null;
+    resetTile(this.x, this.y);
+    if (this.id === 'enemy') {
+      game.worldState.currentQuest = 'Escape! [coming soon]';
+      game.sidebar.update();
+    }
+  };
+
+  var Sidebar = function() {
+    this.textStyle = {
+      font: '15px monospace',
+      fill: '#fff'
+    };
+
+    this.x = NUM_COLS * TILE_SIZE;
+
+    // Fixed text items:
+    game.add.text(
+      this.x,
+      0,
+      'Welcome, Adventurer!',
+      this.textStyle
+    );
+    game.add.text(
+      this.x,
+      30,
+      'HP:',
+      this.textStyle
+    );
+    game.add.text(
+      this.x,
+      50,
+      'Attack:',
+      this.textStyle
+    );
+    game.add.text(
+      this.x,
+      70,
+      'Defense:',
+      this.textStyle
+    );
+    game.add.text(
+      this.x,
+      110,
+      'Quest:',
+      this.textStyle
+    );
+
+    game.add.text(
+      this.x,
+      200,
+      'WASD or arrow keys to move.',
+      this.textStyle
+    );
+
+    // Text items with dynamic values:
+    var valuesX = this.x + 120;
+    this.hpDisplay = game.add.text(
+      valuesX,
+      30,
+      '',
+      this.textStyle
+    );
+    this.attackDisplay = game.add.text(
+      valuesX,
+      50,
+      '',
+      this.textStyle
+    );
+    this.defenseDisplay = game.add.text(
+      valuesX,
+      70,
+      '',
+      this.textStyle
+    );
+    this.questDisplay = game.add.text(
+      this.x + 10,
+      130,
+      '',
+      this.textStyle
+    );
+
+    this.update();
+  };
+
+  Sidebar.prototype.update = function() {
+    var player = game.actors['player'];
+    this.hpDisplay.text = player.currentHP + '/' + player.maxHP;
+    this.attackDisplay.text = player.attack;
+    this.defenseDisplay.text = player.defense;
+
+    this.questDisplay.text = game.worldState.currentQuest;
+  };
+
+  var Bottombar = function() {
+    this.messageDisplay = game.add.text(
+      10,
+      NUM_ROWS * TILE_SIZE + 10,
+      '',
+      {
+        font: '15px monospace',
+        fill: '#fff',
+      }
+    );
+  };
+
+  Bottombar.prototype.update = function() {
+    this.messageDisplay.text = game.worldState.messages.slice(-3).join('\n');
+  };
+
   function create() {
     initializeScreen();
 
-    worldState = {
+    game.worldState = {
       currentQuest: 'Kill the (B)addie!',
       messages: []
     };
 
-    map = generateMap();
-    actors = generateActors();
+    game.map = generateMap();
+    game.actors = {};
+    generateActors();
 
     updateScreen();
 
-    initializeSidebar();
-    updateSidebar();
+    game.sidebar = new Sidebar();
+    game.bottombar = new Bottombar();
 
-    initializeBottombar();
     addMessage('You feel a weirdly familiar disorientation.');
 
     game.input.keyboard.addCallbacks(null, null, onKeyUp);
@@ -71,65 +262,70 @@ function init(parent) {
   }
 
   function generateActors() {
-    actors = {};
-    player = {
-      id: 'player',
-      tile: '@',
-      x: Math.ceil(Math.random() * 3),
-      y: Math.ceil(Math.random() * 3),
-      currentHP: 100,
-      maxHP: 100,
-      attack: 10,
-      defense: 0,
-      name: 'you'
+    player = new Actor(
+      'player',
+      '@',
+      'you',
+      {
+        maxHP: 100,
+        attack: 10,
+        defense: 0,
+      },
+      {
+        x: getRandomInt(1, 4),
+        y: getRandomInt(1, 4),
+      }
+    );
+    enemy = new Actor(
+      'enemy',
+      'B',
+      'the big baddie',
+      {
+        maxHP: 75,
+        attack: 5,
+        defense: 1,
+      },
+      {
+        x: getRandomInt(NUM_COLS - 3, NUM_COLS - 1),
+        y: getRandomInt(NUM_ROWS - 3, NUM_ROWS - 1),
+      }
+    );
+    enemy.reactToAttack = function(attacker) {
+      if (this.currentHP < 20) {
+        var healed = getRandomInt(5, 20);
+        this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
+        addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
+      } else {
+        this.attackTarget(attacker);
+      }
     };
-    actors[player.id] = player;
-    enemy = {
-      id: 'enemy',
-      tile: 'B',
-      x: NUM_COLS - Math.ceil(Math.random() * 2) - 1,
-      y: NUM_ROWS - Math.ceil(Math.random() * 2) - 1 ,
-      currentHP: 75,
-      maxHP: 75,
-      attack: 5,
-      defense: 1,
-      name: 'the big baddie'
-    };
-    actors[enemy.id] = enemy;
-    for (var id in actors) {
-      var actor = actors[id];
-      // HACK: Just set wherever an actor is to a floor tile
-      // in case it was a wall.
-      map[actor.y][actor.x] = '.';
-      actorPositions[actor.y][actor.x] = actor;
-    }
-    return actors;
   }
 
   function onKeyUp(event) {
+    var player = game.actors['player'];
     switch(event.keyCode) {
       case Phaser.Keyboard.LEFT:
       case Phaser.Keyboard.A:
-        movePlayer({x: -1});
+        player.move({x: -1});
         break;
       case Phaser.Keyboard.RIGHT:
       case Phaser.Keyboard.D:
-        movePlayer({x: 1});
+        player.move({x: 1});
         break;
       case Phaser.Keyboard.UP:
       case Phaser.Keyboard.W:
-        movePlayer({y: -1});
+        player.move({y: -1});
         break;
       case Phaser.Keyboard.DOWN:
       case Phaser.Keyboard.S:
-        movePlayer({y: 1});
+        player.move({y: 1});
         break;
     }
   }
 
   function initializeScreen() {
-    gameScreen = [];
-    actorPositions = [];
+    game.screen = [];
+    game.actorPositions = [];
     for (var y = 0; y < NUM_ROWS; y++) {
       screenRow = [];
       actorPosRow = [];
@@ -137,201 +333,55 @@ function init(parent) {
         screenRow.push(createTile('.', x, y));
         actorPosRow.push(null);
       }
-      gameScreen.push(screenRow);
-      actorPositions.push(actorPosRow);
+      game.screen.push(screenRow);
+      game.actorPositions.push(actorPosRow);
     }
   }
 
   function updateScreen() {
     for (var y = 0; y < NUM_ROWS; y++) {
-      row = map[y];
+      row = game.map[y];
       for (var x = 0; x < NUM_COLS; x++) {
-        gameScreen[y][x].text = row[x];
+        game.screen[y][x].text = row[x];
       }
     }
     updateActors();
   }
 
   function updateActors() {
-    for (var name in actors) {
-      var actor = actors[name];
-      gameScreen[actor.y][actor.x].text = actor.tile;
+    for (var name in game.actors) {
+      var actor = game.actors[name];
+      game.screen[actor.y][actor.x].text = actor.tile;
     }
   }
-
-  function movePlayer(dir) {
-    x = player.x + (dir.x || 0);
-    y = player.y + (dir.y || 0);
-    actor = actorPositions[y][x];
-    if (actor !== null) {
-      doCombat(player, actor);
-    } else if (map[y][x] === '.' &&
-        y >= 0 && y < NUM_ROWS &&
-        x >= 0 && x < NUM_COLS) {
-      actorPositions[player.y][player.x] = null;
-      actorPositions[y][x] = player;
-      player.x = x;
-      player.y = y;
-      updateScreen();
-    }
-  }
-
-  function doCombat(player, actor) {
-    var playerDamage = Math.ceil(player.attack * (1.2 - Math.random()*0.4)) - actor.defense;
-    var actorDamage = Math.ceil(actor.attack * (1.2 - Math.random()*0.4)) - player.defense;
-    actor.currentHP = Math.max(0, actor.currentHP - playerDamage);
-    var message = capitalize(player.name) + ' hit ' + actor.name + ' for ' + playerDamage + ' damage!';
-    addMessage(message);
-    if (actor.currentHP > 0) {
-      player.currentHP = Math.max(0, player.currentHP - actorDamage);
-      message = capitalize(actor.name) + ' hit ' + player.name + ' for ' + actorDamage + ' damage!';
-      addMessage(message);
-      var percentHP = actor.currentHP / actor.maxHP;
-      if (percentHP < 0.25) {
-        addMessage(capitalize(actor.name) + ' is bleeding profusely.');
-      } else if (percentHP < 0.5) {
-        addMessage(capitalize(actor.name) + ' is breathing heavily.');
-      }
-    } else {
-      killActor(actor);
-      message = capitalize(player.name) + ' kill ' + actor.name + '!';
-      addMessage(message);
-    }
-    updateSidebar();
-  }
-
-  function killActor(actor) {
-    delete actors[actor.id];
-    actorPositions[actor.y][actor.x] = null;
-    resetTile(actor.x, actor.y);
-    if (actor.id === 'enemy') {
-      worldState.currentQuest = 'Escape! [coming soon]';
-      updateSidebar();
-    }
-  }
-
-  var textStyle = {
-    font: TILE_SIZE + 'px monospace',
-    fill: '#fff'
-  };
 
   function createTile(tile, x, y) {
     return game.add.text(
       x * TILE_SIZE,
       y * TILE_SIZE,
       tile,
-      textStyle
-    );
-  }
-
-  function resetTile(x, y) {
-    gameScreen[y][x].text = map[y][x];
-  }
-
-  var sidebarTextStyle = {
-    font: '15px monospace',
-    fill: '#fff'
-  };
-
-  function initializeSidebar() {
-    var sidebarX = NUM_COLS * TILE_SIZE;
-    // Fixed text items:
-    game.add.text(
-      sidebarX,
-      0,
-      'Welcome, Adventurer!',
-      sidebarTextStyle
-    );
-    game.add.text(
-      sidebarX,
-      30,
-      'HP:',
-      sidebarTextStyle
-    );
-    game.add.text(
-      sidebarX,
-      50,
-      'Attack:',
-      sidebarTextStyle
-    );
-    game.add.text(
-      sidebarX,
-      70,
-      'Defense:',
-      sidebarTextStyle
-    );
-    game.add.text(
-      sidebarX,
-      110,
-      'Quest:',
-      sidebarTextStyle
-    );
-
-    game.add.text(
-      sidebarX,
-      200,
-      'WASD or arrow keys to move.',
-      sidebarTextStyle
-    );
-
-    // Text items with dynamic values:
-    var valuesX = sidebarX + 120;
-    hpDisplay = game.add.text(
-      valuesX,
-      30,
-      '',
-      sidebarTextStyle
-    );
-    attackDisplay = game.add.text(
-      valuesX,
-      50,
-      '',
-      sidebarTextStyle
-    );
-    defenseDisplay = game.add.text(
-      valuesX,
-      70,
-      '',
-      sidebarTextStyle
-    );
-    questDisplay = game.add.text(
-      sidebarX + 10,
-      130,
-      '',
-      sidebarTextStyle
-    );
-  }
-
-  function updateSidebar() {
-    hpDisplay.text = player.currentHP + '/' + player.maxHP;
-    attackDisplay.text = player.attack;
-    defenseDisplay.text = player.defense;
-
-    questDisplay.text = worldState.currentQuest;
-  }
-
-  function initializeBottombar() {
-    messageDisplay = game.add.text(
-      10,
-      NUM_ROWS * TILE_SIZE + 10,
-      '',
       {
-        font: '15px monospace',
-        fill: '#fff',
+        font: TILE_SIZE + 'px monospace',
+        fill: '#fff'
       }
     );
   }
 
-  function updateBottombar() {
-    messageDisplay.text = worldState.messages.slice(-3).join('\n');
+  function resetTile(x, y) {
+    game.screen[y][x].text = game.map[y][x];
   }
 
   function addMessage(message) {
-    worldState.messages.push(message);
-    updateBottombar();
+    game.worldState.messages.push(message);
+    game.bottombar.update();
   }
 
   function capitalize(s) {
     return s[0].toUpperCase() + s.slice(1);
   }
+
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
+
 }
