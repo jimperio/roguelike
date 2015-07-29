@@ -21,7 +21,7 @@ function init(parent) {
     false
   );
 
-  var Actor = function(id, tile, name, stats, position) {
+  var Actor = function(id, tile, name, stats, position, options) {
     this.id = id;
     this.tile = tile;
     this.name = name;
@@ -36,6 +36,11 @@ function init(parent) {
     this.x = this.y = null;
     this.setPosition(position);
 
+    if (options) {
+      for (var key in options) {
+        this[key] = options[key];
+      }
+    }
     game.actors[id] = this;
     return this;
   };
@@ -288,17 +293,19 @@ function init(parent) {
       {
         x: getRandomInt(NUM_COLS - 3, NUM_COLS - 1),
         y: getRandomInt(NUM_ROWS - 3, NUM_ROWS - 1),
+      },
+      {
+        reactToAttack: function(attacker) {
+          if (this.currentHP < 20) {
+            var healed = getRandomInt(5, 20);
+            this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
+            addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
+          } else {
+            this.attackTarget(attacker);
+          }
+        }
       }
     );
-    enemy.reactToAttack = function(attacker) {
-      if (this.currentHP < 20) {
-        var healed = getRandomInt(5, 20);
-        this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
-        addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
-      } else {
-        this.attackTarget(attacker);
-      }
-    };
   }
 
   function onKeyUp(event) {
