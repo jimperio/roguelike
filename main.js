@@ -22,26 +22,31 @@ function init(parent) {
   );
 
   function create() {
-    Map.init();
-    Actors.init();
-    Screen.init();
-
-    Sidebar.init();
-    Bottombar.init();
-
     WorldState.init();
-    WorldState.addMessage('You feel a weirdly familiar disorientation.');
-
-    Sidebar.update();
-    Bottombar.update();
 
     game.input.keyboard.addCallbacks(null, null, onKeyUp);
   }
 
   var WorldState = {
     init: function() {
+      Screen.init();
+      Sidebar.init();
+      Bottombar.init();
+      this.reset();
+    },
+    reset: function() {
       this.currentQuest = 'Kill the (B)addie!';
       this.messages = [];
+      this.gameOver = false;
+
+      Map.generate();
+      Actors.init();
+      Screen.update();
+
+      this.addMessage('You feel a weirdly familiar disorientation.');
+
+      Sidebar.update();
+      Bottombar.update();
     },
     addMessage: function(message) {
       this.messages.push(message);
@@ -51,14 +56,14 @@ function init(parent) {
       this.currentQuest = newQuest;
       Sidebar.update();
     },
+    gameOver: function() {
+      this.gameOver = true;
+    },
   };
 
   var Map = {
-    init: function() {
-      this.map = [];
-      this.generate();
-    },
     generate: function() {
+      this.map = [];
       for (var y = 0; y < NUM_ROWS; y++) {
         mapRow = [];
         for (var x = 0; x < NUM_COLS; x++) {
@@ -100,7 +105,6 @@ function init(parent) {
         }
         this.tiles.push(screenRow);
       }
-      this.update();
     },
     createTile: function(tile, x, y) {
       return game.add.text(
@@ -161,7 +165,7 @@ function init(parent) {
         'the big baddie',
         {
           maxHP: 75,
-          attack: 5,
+          attack: 25,
           defense: 1,
         },
         {
@@ -194,7 +198,9 @@ function init(parent) {
     },
     movePlayer: function(dir) {
       var player = this.getPlayer();
-      this.move(player, dir);
+      if (player.isAlive()) {
+        this.move(player, dir);
+      }
     },
     move: function(actor, dir) {
       x = actor.x + (dir.x || 0);
@@ -229,18 +235,20 @@ function init(parent) {
       return this.byPosition[this.key(x, y)];
     },
     kill: function(actor) {
-      delete this.byId[actor.id];
-      this.all = this.all.filter(function(a) { return a.id !== actor.id; });
       this.byPosition[this.key(actor.x, actor.y)] = null;
 
       Screen.resetTile(actor.x, actor.y);
+
+      if (actor.id == 'player') {
+        WorldState.setQuest('Sadly, you have perished.\n(R)estart?');
+      }
 
       if (actor.id === 'enemy') {
         WorldState.setQuest('Escape! [coming soon]');
       }
     },
     getAll: function() {
-      return this.all;
+      return this.all.filter(function(a) { return a.isAlive(); });
     },
     key: function(x, y) {
       return x + ':' + y;
@@ -414,6 +422,9 @@ function init(parent) {
       case Phaser.Keyboard.DOWN:
       case Phaser.Keyboard.S:
         Actors.movePlayer({y: 1});
+        break;
+      case Phaser.Keyboard.R:
+        WorldState.reset();
         break;
     }
   }
