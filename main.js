@@ -37,7 +37,7 @@ function init(parent) {
     reset: function() {
       this.currentQuest = 'Kill the (B)addie!';
       this.messages = [];
-      this.gameOver = false;
+      this.isGameOver = false;
 
       Map.generate();
       Actors.init();
@@ -57,7 +57,8 @@ function init(parent) {
       Sidebar.update();
     },
     gameOver: function() {
-      this.gameOver = true;
+      this.isGameOver = true;
+      this.setQuest('Sadly, you have perished.\n[R]estart?');
     },
   };
 
@@ -240,7 +241,7 @@ function init(parent) {
       Screen.resetTile(actor.x, actor.y);
 
       if (actor.id == 'player') {
-        WorldState.setQuest('Sadly, you have perished.\n(R)estart?');
+        WorldState.gameOver();
       }
 
       if (actor.id === 'enemy') {
