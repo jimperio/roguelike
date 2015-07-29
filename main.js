@@ -150,8 +150,16 @@ function init(parent) {
         'you',
         {
           maxHP: 100,
-          attack: 10,
-          defense: 0,
+        },
+        {
+          weapon: {
+            name: 'Rusty dagger',
+            attack: 10,
+          },
+          armor: {
+            name: 'Tattered robe',
+            defense: 1,
+          },
         }
       );
       this.add(player);
@@ -166,13 +174,19 @@ function init(parent) {
         'the big baddie',
         {
           maxHP: 75,
-          attack: 25,
-          defense: 1,
         },
         {
+          weapon: {
+            name: 'Unspeakable claws',
+            attack: 5,
+          },
+          armor: {
+            name: 'Natural hide',
+            defense: 2,
+          },
           reactToAttack: function(attacker) {
             if (this.currentHP < 20) {
-              var healed = getRandomInt(5, 20);
+              var healed = getRandomInt(5, 15);
               this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
               WorldState.addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
             } else {
@@ -267,8 +281,15 @@ function init(parent) {
       if (stats.currentHP) {
         actor.currentHP = stats.currentHP;
       }
-      actor.attack = stats.attack;
-      actor.defense = stats.defense;
+
+      actor.weapon = {
+        name: '-',
+        attack: 0,
+      };
+      actor.armor = {
+        name: '-',
+        defense: 0,
+      };
 
       if (options) {
         for (var key in options) {
@@ -281,8 +302,14 @@ function init(parent) {
     isAlive: function() {
       return this.currentHP > 0;
     },
+    attack: function() {
+      return this.weapon.attack;
+    },
+    defense: function() {
+      return this.armor.defense;
+    },
     attackTarget: function(target) {
-      var damage = Math.ceil(this.attack * (1.2 - Math.random()*0.4)) - target.defense;
+      var damage = Math.ceil(this.attack() * (1.2 - Math.random()*0.4)) - target.defense();
       target.currentHP = Math.max(0, target.currentHP - damage);
       var message = capitalize(this.name) + ' hit ' + target.name + ' for ' + damage + ' damage!';
       WorldState.addMessage(message);
@@ -340,20 +367,32 @@ function init(parent) {
       );
       game.add.text(
         this.x,
-        110,
+        100,
+        'Weapon:',
+        this.textStyle
+      );
+      game.add.text(
+        this.x,
+        120,
+        'Armor:',
+        this.textStyle
+      );
+      game.add.text(
+        this.x,
+        150,
         'Quest:',
         this.textStyle
       );
 
       game.add.text(
         this.x,
-        200,
+        220,
         'WASD or arrow keys to move.',
         this.textStyle
       );
 
       // Text items with dynamic values:
-      var valuesX = this.x + 120;
+      var valuesX = this.x + 80;
       this.hpDisplay = game.add.text(
         valuesX,
         30,
@@ -372,9 +411,21 @@ function init(parent) {
         '',
         this.textStyle
       );
+      this.weaponDisplay = game.add.text(
+        valuesX,
+        100,
+        '',
+        this.textStyle
+      );
+      this.armorDisplay = game.add.text(
+        valuesX,
+        120,
+        '',
+        this.textStyle
+      );
       this.questDisplay = game.add.text(
         this.x + 10,
-        130,
+        170,
         '',
         this.textStyle
       );
@@ -382,8 +433,11 @@ function init(parent) {
     update: function() {
       var player = Actors.getPlayer();
       this.hpDisplay.text = player.currentHP + '/' + player.maxHP;
-      this.attackDisplay.text = player.attack;
-      this.defenseDisplay.text = player.defense;
+      this.attackDisplay.text = player.attack();
+      this.defenseDisplay.text = player.defense();
+
+      this.weaponDisplay.text = player.weapon.name;
+      this.armorDisplay.text = player.armor.name;
 
       this.questDisplay.text = WorldState.currentQuest;
     },
