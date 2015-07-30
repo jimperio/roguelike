@@ -178,17 +178,36 @@ function init(parent) {
         {
           weapon: {
             name: 'Unspeakable claws',
-            attack: 5,
+            attack: 25,
           },
           armor: {
             name: 'Natural hide',
-            defense: 2,
+            defense: 5,
           },
+          lastCantrip: -1,
           reactToAttack: function(attacker) {
             if (this.currentHP < 20) {
               var healed = getRandomInt(5, 15);
               this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
               WorldState.addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
+            } else if (Math.random() > 0.5) {
+              // Half the time, the baddie just does nothing.
+              var cantrips = [
+                ' seems to find amusement in just staring you down. You shiver.',
+                ' growls menacingly, but just stands there.',
+                ' suddenly swats at a cave fly buzzing around its head.',
+                ' begins to emit an eerie glow, though it soon fades.',
+                ' snorts and stamps its heavy feet.',
+                ' is distracted by a distant sound.',
+                ' cackles!',
+                ' seems to grow a little bit bored with you.',
+              ];
+              // Inelegant way to prevent repetitions.
+              var nextCantrip = this.lastCantrip;
+              while (nextCantrip === this.lastCantrip) {
+                nextCantrip = getRandomInt(0, cantrips.length);
+              }
+              WorldState.addMessage(capitalize(this.name) + cantrips[nextCantrip]);
             } else {
               this.attackTarget(attacker);
             }
