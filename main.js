@@ -386,7 +386,7 @@ function init(parent) {
 
       game.add.text(
         this.x,
-        220,
+        240,
         'WASD or arrow keys to move.',
         this.textStyle
       );
