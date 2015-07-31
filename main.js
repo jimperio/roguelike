@@ -508,13 +508,20 @@ function init(parent) {
       this.attackTarget(attacker);
     },
     equip: function(item) {
+      var prevItem = null;
       if (item.type === Item.types.WEAPON) {
+        prevItem = this.weapon;
         this.weapon = item;
         Items.remove(item);
       } else if (item.type === Item.types.ARMOR) {
+        prevItem = this.armor;
         this.armor = item;
         Items.remove(item);
       }
+
+      Items.add(prevItem);
+      Items.setPosition(prevItem, {x: this.x, y: this.y});
+
       Sidebar.update();
       Screen.update();
     },
