@@ -40,8 +40,9 @@ function init(parent) {
       this.isGameOver = false;
 
       Map.generate();
-      Actors.init();
+
       Items.init();
+      Actors.init();
 
       Screen.update();
 
@@ -147,6 +148,9 @@ function init(parent) {
     placeObjects: function(objects) {
       for (var i = 0; i < objects.length; i++) {
         var object = objects[i];
+
+        if (object.x === null || object.y === null) continue;
+
         this.tiles[object.y][object.x].text = object.tile;
       }
     }
@@ -201,7 +205,6 @@ function init(parent) {
   var Items = {
     init: function() {
       Objects.enable(this);
-
       this.generate();
     },
     generate: function() {
@@ -213,7 +216,6 @@ function init(parent) {
           attack: 20,
         }
       );
-      this.add(weapon);
       this.setPosition(weapon, {x: getRandomInt(5, 7), y: getRandomInt(5, 7)});
       var armor = Item.create(
         'chain',
@@ -223,7 +225,6 @@ function init(parent) {
           defense: 10,
         }
       );
-      this.add(armor);
       this.setPosition(armor, {x: getRandomInt(2, 5), y: getRandomInt(7, 9)});
     },
     getAll: function() {
@@ -265,6 +266,8 @@ function init(parent) {
         item[key] = options[key];
       }
 
+      Items.add(item);
+
       return item;
     },
     createWeapon: function(id, name, attack) {
@@ -303,7 +306,6 @@ function init(parent) {
           isPlural: true,
         }
       );
-      this.add(player);
       this.setPosition(player, {
         x: getRandomInt(1, 4),
         y: getRandomInt(1, 4),
@@ -357,7 +359,6 @@ function init(parent) {
           }
         }
       );
-      this.add(enemy);
       this.setPosition(enemy, {
         x: getRandomInt(NUM_COLS - 3, NUM_COLS - 1),
         y: getRandomInt(NUM_ROWS - 3, NUM_ROWS - 1),
@@ -472,6 +473,8 @@ function init(parent) {
         }
       }
 
+      Actors.add(actor);
+
       return actor;
     },
     isAlive: function() {
@@ -519,7 +522,6 @@ function init(parent) {
         Items.remove(item);
       }
 
-      Items.add(prevItem);
       Items.setPosition(prevItem, {x: this.x, y: this.y});
 
       Sidebar.update();
