@@ -396,6 +396,31 @@ function init(parent) {
           }
           WorldState.addMessage(message);
         }
+
+        if (actor.id === 'player') {
+          // HACK: Enemy movement shouldn't be tied to player movement directly.
+          // There should probably be some other model of "time passing" and
+          // other actor being able to (re)act.
+          var enemy = this.getById('enemy');
+          var seed = getRandomInt(0, 4);
+          var enemyDir;
+          switch (seed) {
+            case 0:
+              enemyDir = {x: 1, y: 0};
+              break;
+            case 1:
+              enemyDir = {x: -1, y: 0};
+              break;
+            case 2:
+              enemyDir = {x: 0, y: 1};
+              break;
+            case 3:
+              enemyDir = {x: 0, y: -1};
+              break;
+          }
+          this.move(enemy, enemyDir);
+        }
+
         Screen.update();
       }
     },
