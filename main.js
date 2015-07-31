@@ -464,6 +464,8 @@ function init(parent) {
         defense: 0,
       };
 
+      actor.x = actor.y = null;
+
       if (options) {
         for (var key in options) {
           actor[key] = options[key];
