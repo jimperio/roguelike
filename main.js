@@ -300,6 +300,7 @@ function init(parent) {
             'tattered robe',
             1
           ),
+          isPlural: true,
         }
       );
       this.add(player);
@@ -462,10 +463,11 @@ function init(parent) {
       WorldState.addMessage(message);
       if (target.isAlive()) {
         var percentHP = target.currentHP / target.maxHP;
+        var verb = target.isPlural ? 'are' : 'is';
         if (percentHP < 0.25) {
-          WorldState.addMessage(capitalize(target.name) + ' is bleeding profusely.');
+          WorldState.addMessage(capitalize(target.name) + ' ' + verb + ' bleeding profusely.');
         } else if (percentHP < 0.5) {
-          WorldState.addMessage(capitalize(target.name) + ' is breathing heavily.');
+          WorldState.addMessage(capitalize(target.name) + ' ' + verb + ' breathing heavily.');
         }
       } else {
         Actors.kill(target);
