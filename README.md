@@ -2,6 +2,8 @@
 
 Simple toy rogue-like using PhaserJS.
 
+http://jimperio.github.io/roguelike/
+
 # Goals
   * Simple procedural map generation
     * Alternatively, easy way to provide custom maps
