@@ -41,6 +41,8 @@ function init(parent) {
 
       Map.generate();
       Actors.init();
+      Items.init();
+
       Screen.update();
 
       this.addMessage('You feel a weirdly familiar disorientation.');
@@ -59,6 +61,15 @@ function init(parent) {
     gameOver: function() {
       this.isGameOver = true;
       this.setQuest('Sadly, you have perished.\n[R]estart?');
+    },
+    equipPlayer: function() {
+      var player = Actors.getPlayer();
+      var item = Items.getByPosition(player.x, player.y);
+      if (item && item.equippable) {
+        player.equip(item);
+      } else {
+        WorldState.addMessage("Nothing to equip here.");
+      }
     },
   };
 
@@ -127,19 +138,146 @@ function init(parent) {
           this.tiles[y][x].text = Map.get(x, y);
         }
       }
+      // Place items first, then actors.
+      var items = Items.getAll();
+      this.placeObjects(items);
       var actors = Actors.getAll();
-      for (var i = 0; i < actors.length; i++) {
-        var actor = actors[i];
-        this.tiles[actor.y][actor.x].text = actor.tile;
+      this.placeObjects(actors);
+    },
+    placeObjects: function(objects) {
+      for (var i = 0; i < objects.length; i++) {
+        var object = objects[i];
+        this.tiles[object.y][object.x].text = object.tile;
       }
+    }
+  };
+
+  var Objects = {
+    init: function() {
+      this.all = [];
+      this.byId = {};
+      this.byPosition = {};
+    },
+    methods: [
+      'add',
+      'setPosition',
+      'getByPosition',
+      'remove',
+    ],
+    enable: function(collection) {
+      this.init.bind(collection)();
+      for (var i = 0; i < this.methods.length; i++) {
+        var methodName = this.methods[i];
+        collection[methodName] = this[methodName].bind(collection);
+      }
+    },
+    add: function(object) {
+      this.all.push(object);
+      this.byId[object.id] = object;
+    },
+    setPosition: function(object, newPosition) {
+      if (object.x === null && object.y === null) {
+        // This is the initial setting of position.
+        // HACK: Just set wherever an object is to a floor tile
+        // in case it was a wall.
+        Map.set(newPosition.x, newPosition.y, '.');
+      } else {
+        this.byPosition[key(object.x, object.y)] = null;
+      }
+      object.x = newPosition.x;
+      object.y = newPosition.y;
+      this.byPosition[key(object.x, object.y)] = object;
+    },
+    getByPosition: function(x, y) {
+      return this.byPosition[key(x, y)];
+    },
+    remove: function(object) {
+      this.byPosition[key(object.x, object.y)] = null;
+      this.all = this.all.filter(function(obj) { return obj.id !== object.id; });
+      Screen.resetTile(object.x, object.y);
+    }
+  };
+
+  var Items = {
+    init: function() {
+      Objects.enable(this);
+
+      this.generate();
+    },
+    generate: function() {
+      var weapon = Item.create(
+        'sword',
+        'steel sword',
+        Item.types.WEAPON,
+        {
+          attack: 20,
+        }
+      );
+      this.add(weapon);
+      this.setPosition(weapon, {x: getRandomInt(5, 7), y: getRandomInt(5, 7)});
+      var armor = Item.create(
+        'chain',
+        'chain mail',
+        Item.types.ARMOR,
+        {
+          defense: 10,
+        }
+      );
+      this.add(armor);
+      this.setPosition(armor, {x: getRandomInt(2, 5), y: getRandomInt(7, 9)});
+    },
+    getAll: function() {
+      return this.all;
+    }
+  };
+
+  var Item = {
+    types: {
+      WEAPON: 1,
+      ARMOR: 2,
+      POTION: 3,
+    },
+    create: function(id, name, type, options) {
+      var item = Object.create(this);
+      item.id = id;
+      switch (type) {
+        case Item.types.WEAPON:
+          item.tile = ')';
+          item.equippable = true;
+          break;
+        case Item.types.ARMOR:
+          item.tile = ']';
+          item.equippable = true;
+          break;
+        case Item.types.POTION:
+          item.tile = '!';
+          break;
+        default:
+          item.tile = '?';
+          break;
+      }
+      item.name = name;
+      item.type = type;
+
+      item.x = item.y = null;
+
+      for (var key in options) {
+        item[key] = options[key];
+      }
+
+      return item;
+    },
+    createWeapon: function(id, name, attack) {
+      return this.create(id, name, Item.types.WEAPON, {attack: attack});
+    },
+    createArmor: function(id, name, defense) {
+      return this.create(id, name, Item.types.ARMOR, {defense: defense});
     },
   };
 
   var Actors = {
     init: function() {
-      this.all = [];
-      this.byId = {};
-      this.byPosition = {};
+      Objects.enable(this);
 
       this.generate();
     },
@@ -152,14 +290,16 @@ function init(parent) {
           maxHP: 100,
         },
         {
-          weapon: {
-            name: 'Rusty dagger',
-            attack: 10,
-          },
-          armor: {
-            name: 'Tattered robe',
-            defense: 1,
-          },
+          weapon: Item.createWeapon(
+            'dagger',
+            'rusty dagger',
+            5
+          ),
+          armor: Item.createArmor(
+            'robe',
+            'tattered robe',
+            1
+          ),
         }
       );
       this.add(player);
@@ -173,21 +313,23 @@ function init(parent) {
         'B',
         'the big baddie',
         {
-          maxHP: 75,
+          maxHP: 250,
         },
         {
-          weapon: {
-            name: 'Unspeakable claws',
-            attack: 25,
-          },
-          armor: {
-            name: 'Natural hide',
-            defense: 5,
-          },
+          weapon: Item.createWeapon(
+            'claws',
+            'unspeakable claws',
+            30
+          ),
+          armor: Item.createArmor(
+            'hide',
+            'natural hide',
+            5
+          ),
           lastCantrip: -1,
           reactToAttack: function(attacker) {
-            if (this.currentHP < 20) {
-              var healed = getRandomInt(5, 15);
+            if (this.currentHP < 20 && Math.random() > 0.4) {
+              var healed = getRandomInt(15, 30);
               this.currentHP = Math.min(this.maxHP, this.currentHP + healed);
               WorldState.addMessage(capitalize(this.name) + ' mumbles strange words and heals itself for ' + healed + '!');
             } else if (Math.random() > 0.5) {
@@ -220,10 +362,6 @@ function init(parent) {
         y: getRandomInt(NUM_ROWS - 3, NUM_ROWS - 1),
       });
     },
-    add: function(actor) {
-      this.all.push(actor);
-      this.byId[actor.id] = actor;
-    },
     getById: function(id) {
       return this.byId[id];
     },
@@ -239,7 +377,7 @@ function init(parent) {
     move: function(actor, dir) {
       x = actor.x + (dir.x || 0);
       y = actor.y + (dir.y || 0);
-      target = this.getByPosition(x, y);
+      var target = this.getByPosition(x, y);
       if (target) {
         actor.attackTarget(target);
         if (target.isAlive()) {
@@ -249,29 +387,19 @@ function init(parent) {
           y >= 0 && y < NUM_ROWS &&
           x >= 0 && x < NUM_COLS) {
         this.setPosition(actor, {x: x, y: y});
+        var item = Items.getByPosition(x, y);
+        if (item) {
+          var message = "You see here: " + item.name + ".";
+          if (item.equippable) {
+            message += " [E]quip it?";
+          }
+          WorldState.addMessage(message);
+        }
         Screen.update();
       }
     },
-    setPosition: function(actor, newPosition) {
-      if (actor.x === null && actor.y === null) {
-        // This is the initial setting of position.
-        // HACK: Just set wherever an actor is to a floor tile
-        // in case it was a wall.
-        Map.set(position.x, position.y, '.');
-      } else {
-        this.byPosition[this.key(actor.x, actor.y)] = null;
-      }
-      actor.x = newPosition.x;
-      actor.y = newPosition.y;
-      this.byPosition[this.key(actor.x, actor.y)] = actor;
-    },
-    getByPosition: function(x, y) {
-      return this.byPosition[this.key(x, y)];
-    },
     kill: function(actor) {
-      this.byPosition[this.key(actor.x, actor.y)] = null;
-
-      Screen.resetTile(actor.x, actor.y);
+      this.remove(actor);
 
       if (actor.id == 'player') {
         WorldState.gameOver();
@@ -349,6 +477,17 @@ function init(parent) {
     reactToAttack: function(attacker) {
       // Default behavior is to just retaliate.
       this.attackTarget(attacker);
+    },
+    equip: function(item) {
+      if (item.type === Item.types.WEAPON) {
+        this.weapon = item;
+        Items.remove(item);
+      } else if (item.type === Item.types.ARMOR) {
+        this.armor = item;
+        Items.remove(item);
+      }
+      Sidebar.update();
+      Screen.update();
     },
   };
 
@@ -455,8 +594,8 @@ function init(parent) {
       this.attackDisplay.text = player.attack();
       this.defenseDisplay.text = player.defense();
 
-      this.weaponDisplay.text = player.weapon.name;
-      this.armorDisplay.text = player.armor.name;
+      this.weaponDisplay.text = capitalize(player.weapon.name);
+      this.armorDisplay.text = capitalize(player.armor.name);
 
       this.questDisplay.text = WorldState.currentQuest;
     },
@@ -500,6 +639,9 @@ function init(parent) {
       case Phaser.Keyboard.R:
         WorldState.reset();
         break;
+      case Phaser.Keyboard.E:
+        WorldState.equipPlayer();
+        break;
     }
   }
 
@@ -511,4 +653,7 @@ function init(parent) {
     return Math.floor(Math.random() * (max - min)) + min;
   }
 
+  function key(x, y) {
+    return x + ':' + y;
+  }
 }
