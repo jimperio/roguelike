@@ -67,7 +67,10 @@ function init(parent) {
       var player = Actors.getPlayer();
       var item = Items.getByPosition(player.x, player.y);
       if (item && item.equippable) {
-        player.equip(item);
+        var prevItem = player.equip(item);
+        if (prevItem) {
+          WorldState.addMessage("You equip the " + item.name + ", and drop the " + prevItem.name + ".");
+        }
       } else {
         WorldState.addMessage("Nothing to equip here.");
       }
@@ -188,9 +191,14 @@ function init(parent) {
       } else {
         this.byPosition[key(object.x, object.y)] = null;
       }
-      object.x = newPosition.x;
-      object.y = newPosition.y;
-      this.byPosition[key(object.x, object.y)] = object;
+
+      if (newPosition === null) {
+        object.x = object.y = null;
+      } else {
+        object.x = newPosition.x;
+        object.y = newPosition.y;
+        this.byPosition[key(object.x, object.y)] = object;
+      }
     },
     getByPosition: function(x, y) {
       return this.byPosition[key(x, y)];
@@ -515,17 +523,17 @@ function init(parent) {
       if (item.type === Item.types.WEAPON) {
         prevItem = this.weapon;
         this.weapon = item;
-        Items.remove(item);
       } else if (item.type === Item.types.ARMOR) {
         prevItem = this.armor;
         this.armor = item;
-        Items.remove(item);
       }
 
+      Items.setPosition(item, null);
       Items.setPosition(prevItem, {x: this.x, y: this.y});
 
       Sidebar.update();
       Screen.update();
+      return prevItem;
     },
   };
 
