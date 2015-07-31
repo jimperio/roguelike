@@ -313,7 +313,7 @@ function init(parent) {
         'B',
         'the big baddie',
         {
-          maxHP: 250,
+          maxHP: 200,
         },
         {
           weapon: Item.createWeapon(
